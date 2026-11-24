@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from supabase import Client, create_client
@@ -91,6 +91,36 @@ def login(body: Credentials) -> JSONResponse:
         },
     )
 
+
+def extract_bearer_token(request: Request) -> str | None:
+    authorization = request.headers.get("Authorization")
+    if authorization is None:
+        return None
+
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        return None
+    
+    return token.strip()
+
+
+@app.get("/public/info")
+def public_info() -> dict[str, str]:
+    return {"message": "Welcome stranger! This info is public."}
+
+@app.get("/protected/profile")
+def protected_profile(request: Request) -> JSONResponse:
+    token = extract_bearer_token(request)
+    if token is None:
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Access token required"}
+        )
+
+    return JSONResponse(
+        status_code=200,
+        content={"message": "Token received, not verifiel yet"},
+    )
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=port, reload=True)
