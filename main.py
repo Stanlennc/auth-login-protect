@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from supabase import Client, create_client
-from supabase_auth.errors import AuthApiError
+from supabase_auth.errors import AuthApiError, AuthError
 
 load_dotenv()
 
@@ -117,9 +117,27 @@ def protected_profile(request: Request) -> JSONResponse:
             content={"error": "Access token required"}
         )
 
+    try:
+        user_response = supabase.auth.get_user(token)
+    except AuthError:
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Invalid or expired token"},
+        )
+    if user_response is None or user_response.user is None:
+        return JSONResponse(
+            status_code=401,
+            content={"error": "Invalid or expired token"},
+        )
+
+    user = user_response.user
     return JSONResponse(
         status_code=200,
-        content={"message": "Token received, not verifiel yet"},
+        content={
+            "id": user.id,
+            "email": user.email,
+            "created_at": user.created_at.isoformat(),
+        },
     )
 
 if __name__ == "__main__":
