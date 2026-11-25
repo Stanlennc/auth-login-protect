@@ -6,6 +6,7 @@ import uvicorn
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse, Response
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from supabase import Client, create_client
 from supabase_auth.errors import AuthApiError, AuthError
@@ -29,6 +30,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 class Credentials(BaseModel):
@@ -124,7 +127,10 @@ class CurrentUser:
     created_at: str
     token: str
 
-def require_user(request: Request) -> CurrentUser:
+def require_user(
+    request: Request,
+    _: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> CurrentUser:
     token = extract_bearer_token(request)
     if token is None:
         raise AuthFailure("Access token required")
