@@ -1,31 +1,31 @@
 # Auth Login & Protect
 
-API de autenticação com FastAPI e Supabase Auth. O cliente se cadastra e entra pelo Supabase, recebe um JWT e envia esse token no cabeçalho `Authorization` para acessar as rotas protegidas.
+Authentication API built with FastAPI and Supabase Auth. The client signs up and logs in through Supabase, receives a JWT, and sends that token in the `Authorization` header to reach protected routes.
 
-## Sobre o projeto
+## About the project
 
-O Supabase é o provedor de identidade: ele guarda a senha e emite o access token. Esta API não armazena senha. Ela valida o corpo do pedido, repassa o cadastro e o login ao Supabase e, nas rotas protegidas, confere o token com `get_user` antes de responder.
+Supabase is the identity provider: it stores the password and issues the access token. This API does not store passwords. It validates the request body, forwards sign-up and login to Supabase, and checks the token with `get_user` before answering a protected route.
 
-## Arquitetura resumida
+## Architecture
 
-Tudo vive em `main.py`.
+Everything lives in `main.py`.
 
-- `signup` e `login` falam com `supabase.auth`.
-- `extract_bearer_token` lê o cabeçalho `Authorization: Bearer <token>`.
-- `require_user` é a dependência reutilizável. Ela rejeita token ausente ou inválido e só então deixa a rota executar.
-- `HTTPBearer` publica o cadeado no Swagger. `auto_error=False` preserva o status **401** com a chave `error`.
+- `signup` and `login` talk to `supabase.auth`.
+- `extract_bearer_token` reads the `Authorization: Bearer <token>` header.
+- `require_user` is the reusable dependency. It rejects a missing or invalid token, and only then lets the route run.
+- `HTTPBearer` publishes the padlock in Swagger. `auto_error=False` keeps the **401** status and the `error` key.
 
-## Pré-requisitos
+## Prerequisites
 
-- Python 3.10 ou superior
-- Um projeto no [Supabase](https://supabase.com)
-- A porta definida em `PORT` livre. O padrão é `8000`.
+- Python 3.10 or newer
+- A project on [Supabase](https://supabase.com)
+- The port set in `PORT` must be free. The default is `8000`.
 
-## Instalação e configuração
+## Setup
 
-1. Crie um projeto no Supabase.
-2. Em **Authentication → Sign In / Providers → Email**, desligue **Confirm email** para este exercício. Com essa opção ligada, o plano gratuito só envia dois e-mails por hora e o login não devolve sessão até a confirmação.
-3. No botão **Connect**, copie a Project URL e a chave publishable (`sb_publishable_...`). No painel antigo essa chave se chama anon key. Não use a chave secret nem a service role.
+1. Create a Supabase project.
+2. Under **Authentication → Sign In / Providers → Email**, turn off **Confirm email** for this exercise. While that option is on, the free plan sends only two emails per hour, and login does not return a session until the address is confirmed.
+3. In the **Connect** dialog, copy the Project URL and the publishable key (`sb_publishable_...`). On the older dashboard this key is called the anon key. Do not use the secret key or the service role key.
 
 ```bash
 python3 -m venv .venv
@@ -34,73 +34,73 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Preencha o `.env` com os seus valores. Esse arquivo está no `.gitignore` e não deve ir para o Git.
+Fill `.env` with your own values. That file is listed in `.gitignore` and must not be committed.
 
 ```env
-SUPABASE_URL=https://seu-projeto.supabase.co
-SUPABASE_KEY=sua_publishable_key
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your_publishable_key
 PORT=8000
 ```
 
-## Como executar
+## Run
 
 ```bash
 source .venv/bin/activate
 python main.py
 ```
 
-O terminal mostra `Server running and connected to Supabase`. A documentação interativa fica em [http://localhost:8000/docs](http://localhost:8000/docs).
+The terminal prints `Server running and connected to Supabase`. Interactive docs are at [http://localhost:8000/docs](http://localhost:8000/docs).
 
-## Rotas
+## Routes
 
-| Método | Caminho | Auth | Sucesso |
+| Method | Path | Auth | Success |
 | --- | --- | --- | --- |
-| POST | `/auth/signup` | não | 201 |
-| POST | `/auth/login` | não | 200 |
+| POST | `/auth/signup` | no | 201 |
+| POST | `/auth/login` | no | 200 |
 | POST | `/auth/logout` | Bearer | 204 |
-| GET | `/public/info` | não | 200 |
+| GET | `/public/info` | no | 200 |
 | GET | `/protected/profile` | Bearer | 200 |
 | GET | `/protected/dashboard` | Bearer | 200 |
 
-Corpo de signup e login:
+Sign-up and login body:
 
 ```json
-{ "email": "usuario@email.com", "password": "sua-senha" }
+{ "email": "user@email.com", "password": "your-password" }
 ```
 
-Rotas protegidas exigem:
+Protected routes require:
 
 ```http
 Authorization: Bearer <access_token>
 ```
 
-| Situação | Status |
+| Situation | Status |
 | --- | --- |
-| E-mail ou senha ausente ou vazio | 400 |
-| Login incorreto | 401 |
-| Token ausente ou mal formatado | 401 |
-| Token inválido ou expirado | 401 |
-| Logout concluído | 204 |
+| Email or password missing or empty | 400 |
+| Wrong login credentials | 401 |
+| Missing or malformed token | 401 |
+| Invalid or expired token | 401 |
+| Logout completed | 204 |
 
-No Swagger, use **Authorize** e cole somente o `access_token`, sem a palavra `Bearer`.
+In Swagger, click **Authorize** and paste only the `access_token`, without the word `Bearer`.
 
 ## Swagger UI
 
-![Swagger UI com o cadeado nas rotas protegidas](docs/swagger-ui.jpg)
+![Swagger UI with a padlock on the protected routes](docs/swagger-ui.jpg)
 
-## Como rodar os testes
+## Tests
 
-Ainda não há testes automatizados. A verificação é manual, com a API no ar.
+There are no automated tests yet. Check the API by hand while it is running.
 
 ```bash
 curl -i http://localhost:8000/public/info
 
 curl -i -X POST http://localhost:8000/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"usuario@email.com","password":"sua-senha"}'
+  -d '{"email":"user@email.com","password":"your-password"}'
 
 curl -i http://localhost:8000/protected/profile \
-  -H "Authorization: Bearer SEU_ACCESS_TOKEN"
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
-`/public/info` responde **200**. `/protected/profile` sem token responde **401**. Com um access token válido, responde **200** com `id`, `email` e `created_at`.
+`/public/info` returns **200**. `/protected/profile` without a token returns **401**. With a valid access token, it returns **200** and the user's `id`, `email`, and `created_at`.
